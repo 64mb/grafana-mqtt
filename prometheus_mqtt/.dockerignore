@@ -1,0 +1,15 @@
+.idea
+.vscode
+.git
+.directory
+.docker
+
+ci
+docker/dockerfile
+docker/*.dockerfile
+
+.gitignore
+.env
+
+.gitlab-ci.yml
+node_modules

@@ -1,0 +1,23 @@
+{
+  "name": "prometheus-mqtt",
+  "version": "1.1.0",
+  "description": "",
+  "main": "server.js",
+  "author": "goshander",
+  "private": true,
+  "dependencies": {
+    "aedes": "^0.46.3",
+    "fastify": "^3.14.2",
+    "klaw-sync": "^6.0.0",
+    "pino": "^6.11.3",
+    "prom-client": "^13.1.0",
+    "websocket-stream": "^5.5.2"
+  },
+  "devDependencies": {
+    "eslint": "^7.24.0",
+    "eslint-config-airbnb-base": "^14.2.1",
+    "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^5.1.1"
+  }
+}

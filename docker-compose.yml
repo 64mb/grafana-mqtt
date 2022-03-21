@@ -1,0 +1,92 @@
+version: '3.7'
+services:
+  traefik:
+    image: traefik:2.5.3
+    container_name: traefik
+    command:
+      - "--api=true"
+      - "--providers.docker=true"
+      - "--providers.docker.network=${COMPOSE_PROJECT_NAME}_web"
+      - "--providers.docker.watch=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.api.rule=Host(`traefik.${DOMAIN:?lost DOMAIN variable}`)
+      - traefik.http.routers.api.service=api@internal
+    ports:
+      - 80:80
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    networks:
+      - web
+
+  grafana:
+    image: grafana/grafana:8.4.4
+    container_name: grafana
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.grafana.loadbalancer.server.port=3000
+      - traefik.http.routers.grafana.rule=Host(`${DOMAIN:?lost DOMAIN variable}`)
+    environment:
+      GF_SERVER_DOMAIN: ${DOMAIN:?lost DOMAIN variable}
+      GF_SERVER_ROOT_URL: https://${DOMAIN:?lost DOMAIN variable}
+      GF_RENDERING_SERVER_URL: http://grafana_image_renderer:8081/render
+      GF_RENDERING_CALLBACK_URL: http://grafana:3000/
+      # GF_SMTP_ENABLED: 'true'
+      # GF_SMTP_HOST: ${GRAFANA_SMTP_HOST:?lost GRAFANA_SMTP_HOST variable}
+      # GF_SMTP_USER: ${GRAFANA_SMTP_USER:?lost GRAFANA_SMTP_USER variable}
+      # GF_SMTP_PASSWORD: ${GRAFANA_SMTP_PASSWORD:?lost GRAFANA_SMTP_PASSWORD variable}
+      # GF_SMTP_FROM_ADDRESS: ${GRAFANA_SMTP_USER:?lost GRAFANA_SMTP_USER variable}
+
+
+  grafana_image_renderer:
+    image: grafana/grafana-image-renderer:3.3.0
+    container_name: grafana_image_renderer
+
+  prometheus:
+    build:
+      context: ./prometheus
+      dockerfile: ./dockerfile
+    image: prometheus:2.34.0
+    container_name: prometheus
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - prometheus --config.file=/etc/prometheus/config.yml --storage.tsdb.path=/prometheus --storage.tsdb.retention.time=${PROMETHEUS_STORE_TIME:?lost PROMETHEUS_STORE_TIME variable} --log.level=info
+    volumes:
+      - prometheus_data:/prometheus/
+    networks:
+      - local
+      - web
+
+  prometheus_mqtt:
+    image: prometheus-exporter-mqtt:1.0.0
+    container_name: prometheus_mqtt
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.prometheus_mqtt.loadbalancer.server.port=1884
+      - traefik.http.routers.prometheus_mqtt.rule=Host(`ws.${DOMAIN:?lost DOMAIN variable}`)
+      # - traefik.http.routers.prometheus_mqtt.tls=true
+      # - traefik.http.routers.prometheus_mqtt.tls.certresolver=traefik
+    environment:
+      - MQTT_SERVER_HOST=0.0.0.0
+      - MQTT_SERVER_PORT=1883
+      - MQTT_SERVER_WS_PORT=1884
+
+      - MQTT_SERVER_PASSWORD=${MQTT_SERVER_PASSWORD:?lost MQTT_SERVER_PASSWORD variable}
+    ports:
+      - 1883:1883
+    networks:
+      - local
+
+networks:
+  web:
+    driver: bridge
+  local:
+    driver: bridge
+
+volumes:
+  grafana_data:
+  prometheus_data:
+  lets_encrypt:

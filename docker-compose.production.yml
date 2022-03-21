@@ -1,0 +1,88 @@
+version: '3.7'
+services:
+  traefik:
+    extends:
+      service: traefik
+      file: docker-compose.yml
+    restart: always
+    # command:
+      # - "--entrypoints.websecure.address=:443"
+      # - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      # - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      # - "--certificatesresolvers.traefik.acme.email=admin@${DOMAIN}"
+      # - "--certificatesresolvers.traefik.acme.storage=/lets_encrypt/acme.json"
+      # - "--certificatesresolvers.traefik.acme.httpchallenge.entrypoint=web"
+    labels:
+      - traefik.http.routers.api.middlewares=ip-white,auth
+      - traefik.http.middlewares.auth.basicauth.users=${HT_PASSWD:?lost HT_PASSWD variable}
+      - traefik.http.middlewares.ip-white.ipwhitelist.sourcerange=${IP_FILTER:-0.0.0.0/0}
+      - traefik.http.routers.api.tls.certresolver=traefik
+      - traefik.http.routers.api.tls=true
+    ports:
+      - 80:80
+      # - 443:443
+    volumes:
+      - lets_encrypt:/lets_encrypt
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    networks:
+      - web
+
+  grafana:
+    extends:
+      service: grafana
+      file: docker-compose.yml
+    restart: always
+    #labels:
+      #- traefik.http.routers.grafana.tls.certresolver=traefik
+      #- traefik.http.routers.grafana.tls=true
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - local
+      - web
+
+  grafana_image_renderer:
+    extends:
+      service: grafana_image_renderer
+      file: docker-compose.yml
+    restart: always
+    networks:
+      - local
+
+  prometheus:
+    extends:
+      service: prometheus
+      file: docker-compose.yml
+    restart: always
+    volumes:
+      - prometheus_data:/prometheus/
+    networks:
+      - local
+      - web
+
+  prometheus_mqtt:
+    extends:
+      service: prometheus_mqtt
+      file: docker-compose.yml
+    build:
+      context: ./prometheus_mqtt
+      dockerfile: ./docker/production.dockerfile
+    restart: always
+    # labels:
+      # - traefik.http.routers.prometheus_mqtt.tls=true
+      # - traefik.http.routers.prometheus_mqtt.tls.certresolver=traefik
+    environment:
+      - NODE_ENV=production
+    networks:
+      - local
+
+networks:
+  web:
+    driver: bridge
+  local:
+    driver: bridge
+
+volumes:
+  lets_encrypt:
+  grafana_data:
+  prometheus_data:

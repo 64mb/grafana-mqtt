@@ -1,0 +1,17 @@
+.vscode
+.idea
+.directory
+
+.env
+.env.temp
+
+.docker/*
+
+# deploy last commit data
+*.deploy
+
+.key
+
+node_modules
+.nyc_output
+.DS_Store

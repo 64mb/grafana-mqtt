@@ -1,0 +1,65 @@
+version: '3.7'
+services:
+  traefik:
+    extends:
+      service: traefik
+      file: docker-compose.yml
+    restart: unless-stopped
+
+  grafana:
+    extends:
+      service: grafana
+      file: docker-compose.yml
+    restart: unless-stopped
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - local
+      - web
+
+  grafana_image_renderer:
+    extends:
+      service: grafana_image_renderer
+      file: docker-compose.yml
+    restart: unless-stopped
+    networks:
+      - local
+
+  prometheus:
+    extends:
+      service: prometheus
+      file: docker-compose.yml
+    restart: unless-stopped
+    volumes:
+      - prometheus_data:/prometheus/
+    networks:
+      - local
+      - web
+
+  prometheus_mqtt:
+    extends:
+      service: prometheus_mqtt
+      file: docker-compose.yml
+    build:
+      context: ./prometheus_mqtt
+      dockerfile: ./docker/development.dockerfile
+    image: prometheus-mqtt:dev
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./prometheus_mqtt:/home/node/app
+      - node_mqtt_server:/home/node/app/node_modules
+    networks:
+      - local
+
+networks:
+  web:
+    driver: bridge
+  local:
+    driver: bridge
+
+volumes:
+  grafana_data:
+  prometheus_data:
+  node_mqtt_server:
